@@ -1,87 +1,90 @@
 import React, { useEffect, useState } from "react";
 
 const TriviaApp = () => {
-    // State variable to store the list of questions
     const [questions, setQuestions] = useState(null);
-
-    // State variable to store the selected answers for each question
     const [selectedAnswers, setSelectedAnswers] = useState({});
+    const [showAnswerFeedback, setShowAnswerFeedback] = useState(false);
+    const [answerFeedback, setAnswerFeedback] = useState({});
 
-    // Fetch questions from the API when the component mounts
     useEffect(() => {
         const fetchQuestions = async () => {
-            try {
-                // Fetch questions data from the API
-                const response = await fetch("https://the-trivia-api.com/v2/questions");
-                const data = await response.json();
-                // Update the questions state variable with the fetched data
-                setQuestions(data);
-            } catch (error) {
-                console.error("Error fetching questions:", error);
-            }
+            const response = await fetch("https://the-trivia-api.com/v2/questions");
+            const data = await response.json();
+            // Initialize selectedAnswers state with empty values for each question
+            const initialSelectedAnswers = {};
+            data.forEach(question => {
+                initialSelectedAnswers[question.id] = null;
+            });
+            setSelectedAnswers(initialSelectedAnswers);
+            setQuestions(data);
         };
         fetchQuestions();
     }, []);
 
-    // Function to update the selected answer for a question
-    const toggleAnswerSelect = (questionId, selectedAnswer) => {
-        setSelectedAnswers({
-            ...selectedAnswers,
-            [questionId]: selectedAnswer
-        });
+    // Handler function to toggle selected answer for a question
+    const toggleAnswerSelect = (questionId, answer) => {
+        setSelectedAnswers(prevState => ({
+            ...prevState,
+            [questionId]: prevState[questionId] === answer ? null : answer,
+        }));
     };
 
-    // Function to handle showing answer feedback
+    // Handler function to display answer feedback
     const handleShowAnswerFeedback = () => {
-        // Iterate through questions and display feedback
+        setShowAnswerFeedback(true);
+        // Check answers and provide feedback
+        const feedback = {};
         questions.forEach(question => {
-            console.log("Question:", question.question.text);
-            console.log("Your Answer:", selectedAnswers[question.id]);
-            console.log("Correct Answer:", question.correctAnswer);
+            feedback[question.id] = selectedAnswers[question.id] === question.correctAnswer ? 'correct' : 'wrong';
         });
+        setAnswerFeedback(feedback);
     };
 
     return (
         <form>
             <h1>Trivia App</h1>
-            {/* Render questions and answer options */}
             {questions && questions.map((question, index) => (
                 <div key={index} className="question-box">
                     <p>{question.question.text}</p>
-                    {/* For improved user experience, randomize the answers through unordered list */}
                     <ul>
-                        {/* Render incorrect answer options */}
+                        {/* Display answer options as radio buttons within a list */}
                         {question.incorrectAnswers.map((incorrectAnswer, i) => (
                             <li key={i}>
                                 <label>
                                     <input
                                         type="radio"
-                                        name={`question${index}`}
+                                        name={`question${index}`} // Ensure each question has a unique name
                                         value={incorrectAnswer}
                                         checked={selectedAnswers[question.id] === incorrectAnswer}
                                         onChange={() => toggleAnswerSelect(question.id, incorrectAnswer)}
                                     />
-                                    {incorrectAnswer}
+                                    {/* Apply 'wrong' class if answer is incorrect and feedback is shown */}
+                                    <span className={showAnswerFeedback && selectedAnswers[question.id] === incorrectAnswer && answerFeedback[question.id] === 'wrong' ? 'wrong' : ''}>
+                                        {incorrectAnswer}
+                                    </span>
                                 </label>
                             </li>
                         ))}
-                        {/* Render correct answer option */}
+                        {/* Display correct answer as a radio button */}
                         <li>
                             <label>
                                 <input
                                     type="radio"
-                                    name={`question${index}`}
+                                    name={`question${index}`} // Ensure each question has a unique name
                                     value={question.correctAnswer}
                                     checked={selectedAnswers[question.id] === question.correctAnswer}
                                     onChange={() => toggleAnswerSelect(question.id, question.correctAnswer)}
                                 />
-                                {question.correctAnswer}
+                                {/* Apply 'correct' class if answer is correct and feedback is shown */}
+                                <span className={showAnswerFeedback && selectedAnswers[question.id] === question.correctAnswer && answerFeedback[question.id] === 'correct' ? 'correct' : ''}>
+                                    {question.correctAnswer}
+                                </span>
                             </label>
                         </li>
                     </ul>
                 </div>
             ))}
-            {/* Button to submit answers and show feedback */}
+            {/* Button to show answer feedback */}
             <button type="button" onClick={handleShowAnswerFeedback}>Submit Answers</button>
         </form>
     );
